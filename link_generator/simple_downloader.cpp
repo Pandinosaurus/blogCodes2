@@ -8,6 +8,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QSettings>
+#include <QTimer>
 
 namespace{
 
@@ -20,10 +21,12 @@ enum table_column{
 }
 
 simple_downloader::simple_downloader(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::simple_downloader),
-    current_download_row_(0),
-    manager_(new QNetworkAccessManager(this))
+    QMainWindow{parent},
+    ui{new Ui::simple_downloader},
+    current_download_row_{0},
+    manager_{new QNetworkAccessManager(this)},
+    reply_{nullptr},
+    timer_{new QTimer(this)}
 {
     ui->setupUi(this);
 
@@ -35,6 +38,21 @@ simple_downloader::simple_downloader(QWidget *parent) :
     if(settings.contains("simple_downloader/geometry")){
         restoreGeometry(settings.value("simple_downloader/geometry").toByteArray());
     }
+
+    timer_->setInterval(5000);
+    timer_->setSingleShot(true);
+
+    connect(timer_, &QTimer::timeout, [this](){
+        if(reply_){
+            ui->tableWidgetDownloadInfo->item(current_download_row_, State)->setText("Fail");
+            ++current_download_row_;
+            reply_->abort();
+            reply_->deleteLater();
+            reply_ = nullptr;
+            timer_->stop();
+            download();
+        }
+    });
 }
 
 simple_downloader::~simple_downloader()
@@ -127,6 +145,8 @@ void simple_downloader::download()
             connect(reply, &QNetworkReply::errorOccurred, this, &simple_downloader::network_error);
             connect(reply, &QNetworkReply::downloadProgress, this, &simple_downloader::download_progress);
             connect(reply, &QNetworkReply::finished, this, &simple_downloader::download_finished);
+
+            timer_->start();
         }
     }else{
         setEnabled(true);
@@ -181,6 +201,7 @@ void simple_downloader::on_pushButtonDownload_clicked()
 void simple_downloader::download_progress(qint64 bytes_received, qint64 bytes_total)
 {
     qDebug()<<__func__<<": progress = "<<bytes_received<<"/"<<bytes_total;
+    timer_->start();
 }
 
 void simple_downloader::on_pushButtonRedownloadFailure_clicked()

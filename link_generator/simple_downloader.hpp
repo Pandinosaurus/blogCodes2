@@ -7,6 +7,7 @@
 #include <QNetworkReply>
 
 class QNetworkAccessManager;
+class QTimer;
 
 namespace Ui {
 class simple_downloader;
@@ -44,7 +45,9 @@ private:
     Ui::simple_downloader *ui;
 
     int current_download_row_;
-    QNetworkAccessManager *manager_;    
+    QNetworkAccessManager *manager_;
+    QNetworkReply *reply_;
+    QTimer *timer_;
 };
 
 #endif // SIMPLE_DOWNLOADER_HPP
